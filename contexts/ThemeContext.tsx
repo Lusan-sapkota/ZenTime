@@ -1,9 +1,10 @@
-import React, { createContext, useContext, useState, ReactNode, useMemo } from 'react';
-import { 
-  ThemeCollection, 
-  ThemeMode, 
-  VisualMode, 
-  CustomTheme, 
+import React, { createContext, useContext, useState, ReactNode, useMemo, useEffect } from 'react';
+import { Animated, Appearance } from 'react-native';
+import {
+  ThemeCollection,
+  ThemeMode,
+  VisualMode,
+  CustomTheme,
   EnhancedThemeContext,
   ColorPalette,
   MaterialDesignConfig,
@@ -12,6 +13,8 @@ import {
   AccessibilityConfig
 } from '../types/theme';
 import { dawnMistTheme, defaultThemeCollections } from '../constants/themes';
+import { savePreference, loadPreference } from '../utils/storage';
+import { getThemeById } from '../utils/themeValidation';
 
 // ============================================================================
 // Enhanced Theme Context Implementation
@@ -32,32 +35,182 @@ const defaultAccessibilityConfig: AccessibilityConfig = {
   reducedTransparency: false,
 };
 
-const EnhancedThemeContext = createContext<EnhancedThemeContext | undefined>(undefined);
+const EnhancedThemeContextInstance = createContext<EnhancedThemeContext | undefined>(undefined);
 
 export const EnhancedThemeProvider = ({ children }: { children: ReactNode }) => {
   // Core theme state
   const [currentTheme, setCurrentTheme] = useState<ThemeCollection>(dawnMistTheme);
   const [themeMode, setThemeMode] = useState<ThemeMode>('system');
   const [visualMode, setVisualMode] = useState<VisualMode>('minimal');
-  
+  const [isLoading, setIsLoading] = useState(true);
+  const [systemColorScheme, setSystemColorScheme] = useState<'light' | 'dark'>('light');
+
   // Theme collections
   const [availableThemes] = useState<ThemeCollection[]>(defaultThemeCollections);
   const [customThemes, setCustomThemes] = useState<CustomTheme[]>([]);
-  
+
   // Settings
   const [performanceSettings, setPerformanceSettings] = useState<PerformanceSettings>(defaultPerformanceSettings);
   const [accessibilityConfig, setAccessibilityConfig] = useState<AccessibilityConfig>(defaultAccessibilityConfig);
 
-  // Theme actions
+  // Animation values for smooth transitions
+  const [transitionAnimation] = useState(new Animated.Value(1));
+
+  // Storage keys for persistence
+  const STORAGE_KEYS = {
+    THEME_ID: 'theme_id',
+    THEME_MODE: 'theme_mode',
+    VISUAL_MODE: 'visual_mode',
+    CUSTOM_THEMES: 'custom_themes',
+    PERFORMANCE_SETTINGS: 'performance_settings',
+    ACCESSIBILITY_CONFIG: 'accessibility_config',
+  };
+
+  // Load preferences on mount
+  useEffect(() => {
+    const loadPreferences = async () => {
+      try {
+        // Load theme preferences
+        const savedThemeId = await loadPreference(STORAGE_KEYS.THEME_ID);
+        const savedThemeMode = await loadPreference(STORAGE_KEYS.THEME_MODE);
+        const savedVisualMode = await loadPreference(STORAGE_KEYS.VISUAL_MODE);
+
+        // Load custom themes
+        const savedCustomThemes = await loadPreference(STORAGE_KEYS.CUSTOM_THEMES);
+
+        // Load settings
+        const savedPerformanceSettings = await loadPreference(STORAGE_KEYS.PERFORMANCE_SETTINGS);
+        const savedAccessibilityConfig = await loadPreference(STORAGE_KEYS.ACCESSIBILITY_CONFIG);
+
+        // Apply loaded preferences
+        if (savedThemeId) {
+          const theme = getThemeById(savedThemeId);
+          if (theme) {
+            setCurrentTheme(theme);
+          }
+        }
+
+        if (savedThemeMode && ['light', 'dark', 'system'].includes(savedThemeMode)) {
+          setThemeMode(savedThemeMode as ThemeMode);
+        }
+
+        if (savedVisualMode && ['minimal', 'artistic', 'ambient'].includes(savedVisualMode)) {
+          setVisualMode(savedVisualMode as VisualMode);
+        }
+
+        if (savedCustomThemes) {
+          try {
+            const parsedCustomThemes = JSON.parse(savedCustomThemes);
+            if (Array.isArray(parsedCustomThemes)) {
+              setCustomThemes(parsedCustomThemes);
+            }
+          } catch (error) {
+            console.warn('Failed to parse custom themes from storage:', error);
+          }
+        }
+
+        if (savedPerformanceSettings) {
+          try {
+            const parsedSettings = JSON.parse(savedPerformanceSettings);
+            setPerformanceSettings(prev => ({ ...prev, ...parsedSettings }));
+          } catch (error) {
+            console.warn('Failed to parse performance settings from storage:', error);
+          }
+        }
+
+        if (savedAccessibilityConfig) {
+          try {
+            const parsedConfig = JSON.parse(savedAccessibilityConfig);
+            setAccessibilityConfig(prev => ({ ...prev, ...parsedConfig }));
+          } catch (error) {
+            console.warn('Failed to parse accessibility config from storage:', error);
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to load theme preferences:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadPreferences();
+  }, []);
+
+  // Listen to system color scheme changes
+  useEffect(() => {
+    const subscription = Appearance.addChangeListener(({ colorScheme }) => {
+      setSystemColorScheme(colorScheme || 'light');
+    });
+
+    // Set initial system color scheme
+    setSystemColorScheme(Appearance.getColorScheme() || 'light');
+
+    return () => subscription?.remove();
+  }, []);
+
+  // Smooth theme transition animation
+  const animateThemeTransition = (callback: () => void) => {
+    if (performanceSettings.reducedMotion) {
+      callback();
+      return;
+    }
+
+    // Fade out
+    Animated.timing(transitionAnimation, {
+      toValue: 0,
+      duration: 150,
+      useNativeDriver: false,
+    }).start(() => {
+      // Apply theme change
+      callback();
+
+      // Fade in
+      Animated.timing(transitionAnimation, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: false,
+      }).start();
+    });
+  };
+
+  // Enhanced theme actions with persistence and smooth transitions
   const setTheme = (themeId: string) => {
-    const theme = availableThemes.find(t => t.id === themeId) || 
-                  customThemes.find(t => t.id === themeId);
-    if (theme) {
-      setCurrentTheme(theme);
+    const theme = availableThemes.find(t => t.id === themeId) ||
+      customThemes.find(t => t.id === themeId);
+
+    if (theme && theme.id !== currentTheme.id) {
+      animateThemeTransition(() => {
+        setCurrentTheme(theme);
+        savePreference(STORAGE_KEYS.THEME_ID, themeId).catch(error =>
+          console.warn('Failed to save theme preference:', error)
+        );
+      });
     }
   };
 
-  // Custom theme actions
+  const setThemeModeWithPersistence = (mode: ThemeMode) => {
+    if (mode !== themeMode) {
+      animateThemeTransition(() => {
+        setThemeMode(mode);
+        savePreference(STORAGE_KEYS.THEME_MODE, mode).catch(error =>
+          console.warn('Failed to save theme mode preference:', error)
+        );
+      });
+    }
+  };
+
+  const setVisualModeWithPersistence = (mode: VisualMode) => {
+    if (mode !== visualMode) {
+      animateThemeTransition(() => {
+        setVisualMode(mode);
+        savePreference(STORAGE_KEYS.VISUAL_MODE, mode).catch(error =>
+          console.warn('Failed to save visual mode preference:', error)
+        );
+      });
+    }
+  };
+
+  // Custom theme actions with persistence
   const createCustomTheme = (theme: Omit<CustomTheme, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newTheme: CustomTheme = {
       ...theme,
@@ -65,40 +218,96 @@ export const EnhancedThemeProvider = ({ children }: { children: ReactNode }) => 
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    setCustomThemes(prev => [...prev, newTheme]);
+
+    setCustomThemes(prev => {
+      const updated = [...prev, newTheme];
+      // Persist custom themes
+      savePreference(STORAGE_KEYS.CUSTOM_THEMES, JSON.stringify(updated)).catch(error =>
+        console.warn('Failed to save custom themes:', error)
+      );
+      return updated;
+    });
   };
 
   const updateCustomTheme = (id: string, updates: Partial<CustomTheme>) => {
-    setCustomThemes(prev => prev.map(theme => 
-      theme.id === id 
-        ? { ...theme, ...updates, updatedAt: new Date() }
-        : theme
-    ));
-  };
+    setCustomThemes(prev => {
+      const updated = prev.map(theme =>
+        theme.id === id
+          ? { ...theme, ...updates, updatedAt: new Date() }
+          : theme
+      );
 
-  const deleteCustomTheme = (id: string) => {
-    setCustomThemes(prev => prev.filter(theme => theme.id !== id));
-    // Switch to default theme if current theme is being deleted
+      // Persist custom themes
+      savePreference(STORAGE_KEYS.CUSTOM_THEMES, JSON.stringify(updated)).catch(error =>
+        console.warn('Failed to save custom themes:', error)
+      );
+
+      return updated;
+    });
+
+    // Update current theme if it's the one being modified
     if (currentTheme.id === id) {
-      setCurrentTheme(dawnMistTheme);
+      const updatedTheme = { ...currentTheme, ...updates, updatedAt: new Date() };
+      setCurrentTheme(updatedTheme as ThemeCollection);
     }
   };
 
-  // Settings actions
+  const deleteCustomTheme = (id: string) => {
+    setCustomThemes(prev => {
+      const updated = prev.filter(theme => theme.id !== id);
+
+      // Persist custom themes
+      savePreference(STORAGE_KEYS.CUSTOM_THEMES, JSON.stringify(updated)).catch(error =>
+        console.warn('Failed to save custom themes:', error)
+      );
+
+      return updated;
+    });
+
+    // Switch to default theme if current theme is being deleted
+    if (currentTheme.id === id) {
+      animateThemeTransition(() => {
+        setCurrentTheme(dawnMistTheme);
+        savePreference(STORAGE_KEYS.THEME_ID, dawnMistTheme.id).catch(error =>
+          console.warn('Failed to save theme preference:', error)
+        );
+      });
+    }
+  };
+
+  // Settings actions with persistence
   const updatePerformanceSettings = (settings: Partial<PerformanceSettings>) => {
-    setPerformanceSettings(prev => ({ ...prev, ...settings }));
+    setPerformanceSettings(prev => {
+      const updated = { ...prev, ...settings };
+
+      // Persist performance settings
+      savePreference(STORAGE_KEYS.PERFORMANCE_SETTINGS, JSON.stringify(updated)).catch(error =>
+        console.warn('Failed to save performance settings:', error)
+      );
+
+      return updated;
+    });
   };
 
   const updateAccessibilityConfig = (config: Partial<AccessibilityConfig>) => {
-    setAccessibilityConfig(prev => ({ ...prev, ...config }));
+    setAccessibilityConfig(prev => {
+      const updated = { ...prev, ...config };
+
+      // Persist accessibility config
+      savePreference(STORAGE_KEYS.ACCESSIBILITY_CONFIG, JSON.stringify(updated)).catch(error =>
+        console.warn('Failed to save accessibility config:', error)
+      );
+
+      return updated;
+    });
   };
 
   // Utility functions
   const getCurrentColors = (): ColorPalette => {
     // Determine if we should use light or dark colors based on themeMode
-    const shouldUseDark = themeMode === 'dark' || 
-      (themeMode === 'system' && /* system dark mode check would go here */ false);
-    
+    const shouldUseDark = themeMode === 'dark' ||
+      (themeMode === 'system' && systemColorScheme === 'dark');
+
     return shouldUseDark ? currentTheme.dark : currentTheme.light;
   };
 
@@ -108,7 +317,7 @@ export const EnhancedThemeProvider = ({ children }: { children: ReactNode }) => 
 
   const getAnimationConfig = (animationType: keyof ThemeAnimations) => {
     const config = currentTheme.animations[animationType];
-    
+
     // Apply performance settings
     if (performanceSettings.reducedMotion) {
       return {
@@ -117,7 +326,7 @@ export const EnhancedThemeProvider = ({ children }: { children: ReactNode }) => 
         iterations: 1,
       };
     }
-    
+
     return config;
   };
 
@@ -126,29 +335,29 @@ export const EnhancedThemeProvider = ({ children }: { children: ReactNode }) => 
     currentTheme,
     themeMode,
     visualMode,
-    
+
     // Available themes
     availableThemes,
     customThemes,
-    
+
     // Settings
     performanceSettings,
     accessibilityConfig,
-    
-    // Theme actions
+
+    // Theme actions (using the enhanced versions with persistence)
     setTheme,
-    setThemeMode,
-    setVisualMode,
-    
+    setThemeMode: setThemeModeWithPersistence,
+    setVisualMode: setVisualModeWithPersistence,
+
     // Custom theme actions
     createCustomTheme,
     updateCustomTheme,
     deleteCustomTheme,
-    
+
     // Settings actions
     updatePerformanceSettings,
     updateAccessibilityConfig,
-    
+
     // Utility functions
     getCurrentColors,
     getMaterialConfig,
@@ -161,17 +370,29 @@ export const EnhancedThemeProvider = ({ children }: { children: ReactNode }) => 
     customThemes,
     performanceSettings,
     accessibilityConfig,
+    systemColorScheme, // Add this dependency since getCurrentColors uses it
   ]);
 
+  // Show loading state while preferences are being loaded
+  if (isLoading) {
+    return (
+      <EnhancedThemeContextInstance.Provider value={contextValue}>
+        {children}
+      </EnhancedThemeContextInstance.Provider>
+    );
+  }
+
   return (
-    <EnhancedThemeContext.Provider value={contextValue}>
-      {children}
-    </EnhancedThemeContext.Provider>
+    <EnhancedThemeContextInstance.Provider value={contextValue}>
+      <Animated.View style={{ flex: 1, opacity: transitionAnimation }}>
+        {children}
+      </Animated.View>
+    </EnhancedThemeContextInstance.Provider>
   );
 };
 
 export const useEnhancedTheme = () => {
-  const context = useContext(EnhancedThemeContext);
+  const context = useContext(EnhancedThemeContextInstance);
   if (!context) {
     throw new Error('useEnhancedTheme must be used within EnhancedThemeProvider');
   }

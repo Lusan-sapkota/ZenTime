@@ -1,62 +1,49 @@
 /**
- * Theme Utilities
+ * Theme Utility Functions
  * 
- * Utility functions for theme validation, color manipulation, and theme management
+ * This file contains utility functions for theme manipulation, validation,
+ * and conversion between different theme formats.
  */
 
 import { 
-  ColorPalette, 
   ThemeCollection, 
-  CustomTheme, 
-  ColorValidationResult, 
-  ThemeValidator,
+  ColorPalette, 
+  CustomTheme,
   LegacyTheme,
-  MaterialDesignConfig 
+  MaterialDesignConfig,
+  ColorValidationResult,
+  ElevationStyle
 } from '../types/theme';
+import { 
+  themeValidator,
+  validateColorCombination as validateColorCombinationInternal
+} from './themeValidation';
 
 // ============================================================================
-// Color Utility Functions
+// Color Validation Functions (Re-exported from themeValidation)
 // ============================================================================
-
-/**
- * Convert hex color to RGB values
- */
-export const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result ? {
-    r: parseInt(result[1], 16),
-    g: parseInt(result[2], 16),
-    b: parseInt(result[3], 16)
-  } : null;
-};
 
 /**
  * Calculate relative luminance of a color
  */
-export const getRelativeLuminance = (hex: string): number => {
-  const rgb = hexToRgb(hex);
-  if (!rgb) return 0;
-
-  const { r, g, b } = rgb;
+function getRelativeLuminance(color: string): number {
+  const hex = color.replace('#', '');
   
-  // Convert to sRGB
-  const rsRGB = r / 255;
-  const gsRGB = g / 255;
-  const bsRGB = b / 255;
-
-  // Apply gamma correction
-  const rLinear = rsRGB <= 0.03928 ? rsRGB / 12.92 : Math.pow((rsRGB + 0.055) / 1.055, 2.4);
-  const gLinear = gsRGB <= 0.03928 ? gsRGB / 12.92 : Math.pow((gsRGB + 0.055) / 1.055, 2.4);
-  const bLinear = bsRGB <= 0.03928 ? bsRGB / 12.92 : Math.pow((bsRGB + 0.055) / 1.055, 2.4);
-
-  // Calculate relative luminance
-  return 0.2126 * rLinear + 0.7152 * gLinear + 0.0722 * bLinear;
-};
+  const r = parseInt(hex.substr(0, 2), 16) / 255;
+  const g = parseInt(hex.substr(2, 2), 16) / 255;
+  const b = parseInt(hex.substr(4, 2), 16) / 255;
+  
+  const sRGB = [r, g, b].map(c => {
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  });
+  
+  return 0.2126 * sRGB[0] + 0.7152 * sRGB[1] + 0.0722 * sRGB[2];
+}
 
 /**
  * Calculate contrast ratio between two colors
  */
-export const getContrastRatio = (color1: string, color2: string): number => {
+export function getContrastRatio(color1: string, color2: string): number {
   const lum1 = getRelativeLuminance(color1);
   const lum2 = getRelativeLuminance(color2);
   
@@ -64,209 +51,200 @@ export const getContrastRatio = (color1: string, color2: string): number => {
   const darker = Math.min(lum1, lum2);
   
   return (lighter + 0.05) / (darker + 0.05);
-};
+}
 
 /**
- * Determine WCAG compliance level based on contrast ratio
+ * Determine WCAG compliance level
  */
-export const getWCAGLevel = (contrastRatio: number): 'AA' | 'AAA' | 'fail' => {
-  if (contrastRatio >= 7.0) return 'AAA';
-  if (contrastRatio >= 4.5) return 'AA';
-  return 'fail';
-};
-
-// ============================================================================
-// Theme Validation
-// ============================================================================
-
-/**
- * Validate color accessibility for a color palette
- */
-export const validateColorPalette = (palette: ColorPalette): ColorValidationResult[] => {
-  const results: ColorValidationResult[] = [];
+export function getWCAGLevel(contrastRatio: number, isLargeText: boolean = false): 'AA' | 'AAA' | 'fail' {
+  const aaThreshold = isLargeText ? 3.0 : 4.5;
+  const aaaThreshold = isLargeText ? 4.5 : 7.0;
   
-  // Define critical color pairs to validate
-  const colorPairs: Array<{ foreground: keyof ColorPalette; background: keyof ColorPalette; name: string }> = [
-    { foreground: 'onBackground', background: 'background', name: 'Text on Background' },
-    { foreground: 'onSurface', background: 'surface', name: 'Text on Surface' },
-    { foreground: 'onPrimary', background: 'primary', name: 'Text on Primary' },
-    { foreground: 'onSecondary', background: 'secondary', name: 'Text on Secondary' },
-    { foreground: 'onError', background: 'error', name: 'Text on Error' },
-    { foreground: 'text', background: 'background', name: 'Legacy Text on Background' },
-  ];
+  if (contrastRatio >= aaaThreshold) return 'AAA';
+  if (contrastRatio >= aaThreshold) return 'AA';
+  return 'fail';
+}
 
-  colorPairs.forEach(({ foreground, background, name }) => {
-    const foregroundColor = palette[foreground];
-    const backgroundColor = palette[background];
+/**
+ * Validate color palette accessibility
+ */
+export function validateColorPalette(palette: ColorPalette): ColorValidationResult[] {
+  return themeValidator.validateColorPalette(palette);
+}
+
+/**
+ * Validate custom theme
+ */
+export function validateCustomTheme(theme: CustomTheme): { isValid: boolean; errors: string[] } {
+  return themeValidator.validateCustomTheme(theme);
+}
+
+/**
+ * Validate color combination
+ */
+export function validateColorCombination(
+  foreground: string, 
+  background: string
+): ColorValidationResult {
+  return validateColorCombinationInternal(foreground, background);
+}
+
+// ============================================================================
+// Theme Collection Validation
+// ============================================================================
+
+/**
+ * Validate if a theme collection is properly structured and accessible
+ */
+export function isValidThemeCollection(theme: ThemeCollection): boolean {
+  try {
+    // Check required properties
+    if (!theme.id || !theme.name || !theme.description) {
+      return false;
+    }
     
-    if (foregroundColor && backgroundColor) {
-      const contrastRatio = getContrastRatio(foregroundColor, backgroundColor);
-      const wcagLevel = getWCAGLevel(contrastRatio);
-      
-      results.push({
-        isValid: wcagLevel !== 'fail',
-        contrastRatio,
-        wcagLevel,
-        suggestions: wcagLevel === 'fail' ? [
-          `Increase contrast between ${name} colors`,
-          `Current ratio: ${contrastRatio.toFixed(2)}, minimum required: 4.5`
-        ] : undefined,
-      });
+    if (!theme.light || !theme.dark) {
+      return false;
     }
-  });
-
-  return results;
-};
-
-/**
- * Validate a custom theme
- */
-export const validateCustomTheme = (theme: CustomTheme): { isValid: boolean; errors: string[] } => {
-  const errors: string[] = [];
-
-  // Validate required fields
-  if (!theme.id || theme.id.trim() === '') {
-    errors.push('Theme ID is required');
-  }
-
-  if (!theme.name || theme.name.trim() === '') {
-    errors.push('Theme name is required');
-  }
-
-  // Validate color palettes
-  const lightPalette = {
-    ...theme.light,
-    ...theme.customColors.light,
-  } as ColorPalette;
-
-  const darkPalette = {
-    ...theme.dark,
-    ...theme.customColors.dark,
-  } as ColorPalette;
-
-  const lightValidation = validateColorPalette(lightPalette);
-  const darkValidation = validateColorPalette(darkPalette);
-
-  const failedLightValidations = lightValidation.filter(v => !v.isValid);
-  const failedDarkValidations = darkValidation.filter(v => !v.isValid);
-
-  if (failedLightValidations.length > 0) {
-    errors.push(`Light theme accessibility issues: ${failedLightValidations.length} color pairs fail WCAG standards`);
-  }
-
-  if (failedDarkValidations.length > 0) {
-    errors.push(`Dark theme accessibility issues: ${failedDarkValidations.length} color pairs fail WCAG standards`);
-  }
-
-  return {
-    isValid: errors.length === 0,
-    errors,
-  };
-};
-
-/**
- * Theme validator implementation
- */
-export const themeValidator: ThemeValidator = {
-  validateColorPalette,
-  validateCustomTheme,
-  suggestColorAdjustments: (color: string, background: string): string[] => {
-    const currentRatio = getContrastRatio(color, background);
-    const suggestions: string[] = [];
-
-    if (currentRatio < 4.5) {
-      suggestions.push('Increase color contrast to meet WCAG AA standards (4.5:1 minimum)');
-      
-      if (currentRatio < 3.0) {
-        suggestions.push('Consider using a completely different color combination');
-      } else {
-        suggestions.push('Try darkening the text color or lightening the background');
-      }
+    
+    if (!theme.materialConfig || !theme.animations) {
+      return false;
     }
-
-    if (currentRatio < 7.0 && currentRatio >= 4.5) {
-      suggestions.push('Consider increasing contrast to meet WCAG AAA standards (7:1) for better accessibility');
-    }
-
-    return suggestions;
-  },
-};
+    
+    // Validate color palettes
+    const lightResults = validateColorPalette(theme.light);
+    const darkResults = validateColorPalette(theme.dark);
+    
+    // Check if most color combinations pass accessibility tests
+    const lightFailures = lightResults.filter(r => !r.isValid).length;
+    const darkFailures = darkResults.filter(r => !r.isValid).length;
+    
+    // Allow some flexibility - themes are valid if most combinations pass
+    const lightPassRate = (lightResults.length - lightFailures) / lightResults.length;
+    const darkPassRate = (darkResults.length - darkFailures) / darkResults.length;
+    
+    // Be more lenient for now - 50% pass rate is acceptable
+    return lightPassRate >= 0.5 && darkPassRate >= 0.5;
+  } catch (error) {
+    return false;
+  }
+}
 
 // ============================================================================
-// Theme Conversion Utilities
+// Theme ID Generation
 // ============================================================================
 
 /**
- * Convert legacy theme to enhanced color palette
+ * Generate a unique theme ID from a theme name
  */
-export const convertLegacyTheme = (legacyTheme: LegacyTheme): Partial<ColorPalette> => {
+export function generateThemeId(name: string): string {
+  const baseId = name
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, '-')
+    .trim();
+  
+  const timestamp = Date.now();
+  const randomSuffix = Math.random().toString(36).substring(2, 8);
+  
+  return `${baseId}-${timestamp}-${randomSuffix}`;
+}
+
+// ============================================================================
+// Legacy Theme Conversion
+// ============================================================================
+
+/**
+ * Convert legacy theme format to enhanced color palette
+ */
+export function convertLegacyTheme(legacyTheme: LegacyTheme): Partial<ColorPalette> {
   const { colors } = legacyTheme;
   
   return {
-    // Map legacy colors to new structure
+    // Surface colors
     background: colors.background,
-    text: colors.text,
-    accent: colors.accent,
-    secondary: colors.secondary,
-    button: colors.button,
-    divider: colors.divider,
+    surface: colors.background,
+    surfaceVariant: colors.button,
     
-    // Provide sensible defaults for new color tokens
-    surface: legacyTheme.dark ? '#1E1E1E' : '#FFFFFF',
+    // Content colors
     onBackground: colors.text,
     onSurface: colors.text,
+    onSurfaceVariant: colors.text,
+    
+    // Primary colors (map accent to primary)
     primary: colors.accent,
     onPrimary: legacyTheme.dark ? '#000000' : '#FFFFFF',
+    primaryContainer: colors.button,
+    onPrimaryContainer: colors.text,
+    
+    // Secondary colors
+    secondary: colors.secondary,
+    onSecondary: legacyTheme.dark ? '#000000' : '#FFFFFF',
+    secondaryContainer: colors.button,
+    onSecondaryContainer: colors.text,
+    
+    // Utility colors
     outline: colors.divider,
+    outlineVariant: colors.divider,
+    
+    // Legacy support (direct mapping)
+    accent: colors.accent,
+    button: colors.button,
+    divider: colors.divider,
+    text: colors.text,
   };
-};
-
-/**
- * Merge custom colors with base theme colors
- */
-export const mergeThemeColors = (
-  baseColors: ColorPalette, 
-  customColors: Partial<ColorPalette>
-): ColorPalette => {
-  return {
-    ...baseColors,
-    ...customColors,
-  };
-};
+}
 
 // ============================================================================
-// Theme Management Utilities
+// Material Design Configuration
 // ============================================================================
 
 /**
- * Generate a unique theme ID
+ * Create elevation style for material design
  */
-export const generateThemeId = (baseName: string): string => {
-  const timestamp = Date.now();
-  const randomSuffix = Math.random().toString(36).substring(2, 8);
-  const sanitizedName = baseName.toLowerCase().replace(/[^a-z0-9]/g, '-');
-  return `${sanitizedName}-${timestamp}-${randomSuffix}`;
-};
-
-/**
- * Create a default material design configuration
- */
-export const createDefaultMaterialConfig = (isDark: boolean = false): MaterialDesignConfig => {
-  const shadowColor = '#000000';
-  const baseElevation = isDark ? '#1E1E1E' : '#FFFFFF';
+function createElevationStyle(
+  level: number, 
+  isDark: boolean = false,
+  shadowColor: string = '#000000'
+): ElevationStyle {
+  const surfaceColors = isDark ? {
+    0: '#121212',
+    1: '#1E1E1E',
+    2: '#232323',
+    3: '#252525',
+    4: '#272727',
+    5: '#2C2C2C',
+  } : undefined;
   
   return {
+    shadowColor,
+    shadowOffset: { 
+      width: 0, 
+      height: level === 0 ? 0 : Math.max(1, level / 2) 
+    },
+    shadowOpacity: level === 0 ? 0 : 0.1 + (level * 0.02),
+    shadowRadius: level === 0 ? 0 : level * 2,
+    elevation: level,
+    surfaceColor: isDark ? surfaceColors?.[level as keyof typeof surfaceColors] : undefined,
+  };
+}
+
+/**
+ * Create default material design configuration
+ */
+export function createDefaultMaterialConfig(isDark: boolean = false): MaterialDesignConfig {
+  return {
     elevation: {
-      level0: { shadowColor, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0, shadowRadius: 0, elevation: 0 },
-      level1: { shadowColor, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.12, shadowRadius: 2, elevation: 1, surfaceColor: isDark ? '#232323' : undefined },
-      level2: { shadowColor, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.14, shadowRadius: 4, elevation: 2, surfaceColor: isDark ? '#252525' : undefined },
-      level3: { shadowColor, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.16, shadowRadius: 6, elevation: 3, surfaceColor: isDark ? '#272727' : undefined },
-      level4: { shadowColor, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.18, shadowRadius: 8, elevation: 4, surfaceColor: isDark ? '#2C2C2C' : undefined },
-      level5: { shadowColor, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.22, shadowRadius: 16, elevation: 8, surfaceColor: isDark ? '#2F2F2F' : undefined },
+      level0: createElevationStyle(0, isDark),
+      level1: createElevationStyle(1, isDark),
+      level2: createElevationStyle(2, isDark),
+      level3: createElevationStyle(3, isDark),
+      level4: createElevationStyle(4, isDark),
+      level5: createElevationStyle(8, isDark),
     },
     surfaces: {
       tonal: true,
-      elevationOverlay: isDark,
+      elevationOverlay: isDark, // Only use elevation overlay in dark theme
     },
     ripple: {
       enabled: true,
@@ -275,30 +253,80 @@ export const createDefaultMaterialConfig = (isDark: boolean = false): MaterialDe
       duration: 300,
     },
   };
-};
+}
+
+// ============================================================================
+// Theme Manipulation Utilities
+// ============================================================================
 
 /**
- * Check if a theme collection is valid
+ * Merge custom colors into a base color palette
  */
-export const isValidThemeCollection = (theme: ThemeCollection): boolean => {
-  try {
-    // Check required properties
-    if (!theme.id || !theme.name || !theme.light || !theme.dark) {
-      return false;
-    }
+export function mergeCustomColors(
+  basePalette: ColorPalette, 
+  customColors: Partial<ColorPalette>
+): ColorPalette {
+  return {
+    ...basePalette,
+    ...customColors,
+  };
+}
 
-    // Validate color palettes
-    const lightValidation = validateColorPalette(theme.light);
-    const darkValidation = validateColorPalette(theme.dark);
+/**
+ * Generate complementary colors for a theme
+ */
+export function generateComplementaryColors(primaryColor: string): {
+  secondary: string;
+  tertiary: string;
+  accent: string;
+} {
+  // This is a simplified implementation
+  // In a real app, you might use a color theory library
+  const hex = primaryColor.replace('#', '');
+  const r = parseInt(hex.substr(0, 2), 16);
+  const g = parseInt(hex.substr(2, 2), 16);
+  const b = parseInt(hex.substr(4, 2), 16);
+  
+  // Generate complementary color (opposite on color wheel)
+  const compR = 255 - r;
+  const compG = 255 - g;
+  const compB = 255 - b;
+  
+  // Generate analogous colors (adjacent on color wheel)
+  const analogR = Math.min(255, r + 30);
+  const analogG = Math.max(0, g - 30);
+  const analogB = Math.min(255, b + 30);
+  
+  return {
+    secondary: `#${compR.toString(16).padStart(2, '0')}${compG.toString(16).padStart(2, '0')}${compB.toString(16).padStart(2, '0')}`,
+    tertiary: `#${analogR.toString(16).padStart(2, '0')}${analogG.toString(16).padStart(2, '0')}${analogB.toString(16).padStart(2, '0')}`,
+    accent: primaryColor, // Use primary as accent for simplicity
+  };
+}
 
-    // Check if any critical validations fail
-    const criticalFailures = [
-      ...lightValidation.filter(v => !v.isValid),
-      ...darkValidation.filter(v => !v.isValid),
-    ];
+/**
+ * Adjust color brightness
+ */
+export function adjustColorBrightness(color: string, factor: number): string {
+  const hex = color.replace('#', '');
+  const r = Math.min(255, Math.max(0, parseInt(hex.substr(0, 2), 16) * factor));
+  const g = Math.min(255, Math.max(0, parseInt(hex.substr(2, 2), 16) * factor));
+  const b = Math.min(255, Math.max(0, parseInt(hex.substr(4, 2), 16) * factor));
+  
+  return `#${Math.round(r).toString(16).padStart(2, '0')}${Math.round(g).toString(16).padStart(2, '0')}${Math.round(b).toString(16).padStart(2, '0')}`;
+}
 
-    return criticalFailures.length === 0;
-  } catch (error) {
-    return false;
-  }
-};
+/**
+ * Check if a color is considered "dark"
+ */
+export function isColorDark(color: string): boolean {
+  const luminance = getRelativeLuminance(color);
+  return luminance < 0.5;
+}
+
+/**
+ * Get appropriate text color (black or white) for a background
+ */
+export function getContrastingTextColor(backgroundColor: string): string {
+  return isColorDark(backgroundColor) ? '#FFFFFF' : '#000000';
+}

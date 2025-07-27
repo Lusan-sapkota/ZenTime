@@ -35,14 +35,7 @@ const lightElevation = {
   level5: createElevationStyle(8),
 };
 
-const darkElevation = {
-  level0: createElevationStyle(0, '#000000', '#121212'),
-  level1: createElevationStyle(1, '#000000', '#1E1E1E'),
-  level2: createElevationStyle(2, '#000000', '#232323'),
-  level3: createElevationStyle(3, '#000000', '#252525'),
-  level4: createElevationStyle(4, '#000000', '#272727'),
-  level5: createElevationStyle(8, '#000000', '#2C2C2C'),
-};
+
 
 // ============================================================================
 // Default Animation Configurations
@@ -214,19 +207,7 @@ const dawnMistMaterialConfig: MaterialDesignConfig = {
   },
 };
 
-const dawnMistMaterialConfigDark: MaterialDesignConfig = {
-  elevation: darkElevation,
-  surfaces: {
-    tonal: true,
-    elevationOverlay: true,
-  },
-  ripple: {
-    enabled: true,
-    color: '#A3C4F3',
-    opacity: 0.12,
-    duration: 300,
-  },
-};
+
 
 export const dawnMistTheme: ThemeCollection = {
   id: 'dawn-mist',
@@ -522,31 +503,31 @@ const sunsetGlowLight: ColorPalette = {
   surfaceBright: '#FFFFFF',
   
   // Content Colors
-  onBackground: '#431407',
-  onSurface: '#431407',
-  onSurfaceVariant: '#78716C',
+  onBackground: '#1C0A00', // Darker for better contrast
+  onSurface: '#1C0A00', // Darker for better contrast
+  onSurfaceVariant: '#44403C', // Darker for better contrast
   
   // Primary Colors
-  primary: '#EA580C',
+  primary: '#C2410C', // Darker for better contrast
   onPrimary: '#FFFFFF',
   primaryContainer: '#FED7AA',
-  onPrimaryContainer: '#9A3412',
-  primaryFixed: '#EA580C',
+  onPrimaryContainer: '#7C2D12', // Darker for better contrast
+  primaryFixed: '#C2410C',
   onPrimaryFixed: '#FFFFFF',
   
   // Secondary Colors
-  secondary: '#EC4899',
+  secondary: '#BE185D', // Darker for better contrast
   onSecondary: '#FFFFFF',
   secondaryContainer: '#FCE7F3',
-  onSecondaryContainer: '#831843',
-  secondaryFixed: '#EC4899',
+  onSecondaryContainer: '#701A75', // Darker for better contrast
+  secondaryFixed: '#BE185D',
   onSecondaryFixed: '#FFFFFF',
   
   // Tertiary Colors
-  tertiary: '#F59E0B',
+  tertiary: '#B45309', // Darker for better contrast
   onTertiary: '#FFFFFF',
   tertiaryContainer: '#FEF3C7',
-  onTertiaryContainer: '#92400E',
+  onTertiaryContainer: '#78350F', // Darker for better contrast
   
   // System Colors
   error: '#DC2626',
@@ -555,16 +536,16 @@ const sunsetGlowLight: ColorPalette = {
   onErrorContainer: '#7F1D1D',
   
   // Utility Colors
-  outline: '#A8A29E',
+  outline: '#78716C', // Darker for better contrast
   outlineVariant: '#D6D3D1',
   shadow: '#000000',
   scrim: '#000000',
   
   // Legacy support
-  accent: '#EA580C',
+  accent: '#C2410C',
   button: '#FEF2F2',
-  divider: '#A8A29E',
-  text: '#431407',
+  divider: '#78716C',
+  text: '#1C0A00',
 };
 
 const sunsetGlowDark: ColorPalette = {
@@ -578,46 +559,46 @@ const sunsetGlowDark: ColorPalette = {
   // Content Colors
   onBackground: '#FFF7ED',
   onSurface: '#FFF7ED',
-  onSurfaceVariant: '#A8A29E',
+  onSurfaceVariant: '#D6D3D1', // Lighter for better contrast
   
   // Primary Colors
   primary: '#FB923C',
-  onPrimary: '#9A3412',
+  onPrimary: '#1C0A00', // Darker for better contrast
   primaryContainer: '#C2410C',
   onPrimaryContainer: '#FED7AA',
   primaryFixed: '#FB923C',
-  onPrimaryFixed: '#9A3412',
+  onPrimaryFixed: '#1C0A00',
   
   // Secondary Colors
   secondary: '#F472B6',
-  onSecondary: '#831843',
+  onSecondary: '#1C0A00', // Darker for better contrast
   secondaryContainer: '#BE185D',
   onSecondaryContainer: '#FCE7F3',
   secondaryFixed: '#F472B6',
-  onSecondaryFixed: '#831843',
+  onSecondaryFixed: '#1C0A00',
   
   // Tertiary Colors
   tertiary: '#FBBF24',
-  onTertiary: '#92400E',
+  onTertiary: '#1C0A00', // Darker for better contrast
   tertiaryContainer: '#B45309',
   onTertiaryContainer: '#FEF3C7',
   
   // System Colors
   error: '#F87171',
-  onError: '#7F1D1D',
+  onError: '#1C0A00', // Darker for better contrast
   errorContainer: '#991B1B',
   onErrorContainer: '#FECACA',
   
   // Utility Colors
-  outline: '#78716C',
-  outlineVariant: '#44403C',
+  outline: '#A8A29E', // Lighter for better contrast
+  outlineVariant: '#57534E',
   shadow: '#000000',
   scrim: '#000000',
   
   // Legacy support
   accent: '#FB923C',
   button: '#44403C',
-  divider: '#78716C',
+  divider: '#A8A29E',
   text: '#FFF7ED',
 };
 

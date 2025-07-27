@@ -260,6 +260,42 @@ export interface AccessibilityConfig {
 }
 
 // ============================================================================
+// Zen Mode Configuration
+// ============================================================================
+
+/**
+ * Zen mode configuration interface for enhanced focus experience
+ */
+export interface ZenModeConfig {
+  // Core Settings
+  enabled: boolean;
+  autoHideDelay: number; // milliseconds
+  
+  // Visual Effects
+  breathingAnimation: boolean;
+  pulseEffect: boolean;
+  gradualDimming: boolean;
+  
+  // Interaction
+  tapToReveal: boolean;
+  revealDuration: number;
+  
+  // Immersion
+  hideStatusBar: boolean;
+  preventScreenDim: boolean;
+}
+
+/**
+ * Zen mode animation configurations
+ */
+export interface ZenAnimations {
+  breathingCycle: AnimationConfig;
+  pulseEffect: AnimationConfig;
+  fadeTransitions: AnimationConfig;
+  revealAnimations: AnimationConfig;
+}
+
+// ============================================================================
 // Enhanced Theme Context
 // ============================================================================
 
