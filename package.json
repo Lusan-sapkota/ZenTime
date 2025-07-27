@@ -6,17 +6,32 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "test": "jest"
   },
   "dependencies": {
+    "@expo-google-fonts/inter": "^0.4.1",
+    "@react-native-async-storage/async-storage": "^2.2.0",
+    "@react-navigation/bottom-tabs": "^7.4.4",
+    "@react-navigation/native": "^7.1.16",
+    "@react-navigation/stack": "^7.4.4",
+    "dayjs": "^1.11.13",
     "expo": "~53.0.20",
+    "expo-font": "~13.3.2",
+    "expo-keep-awake": "~14.1.4",
+    "expo-screen-orientation": "~8.1.7",
     "expo-status-bar": "~2.2.3",
     "react": "19.0.0",
-    "react-native": "0.79.5"
+    "react-native": "0.79.5",
+    "react-native-paper": "^5.14.5",
+    "react-native-vector-icons": "^10.3.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
+    "@types/jest": "^30.0.0",
     "@types/react": "~19.0.10",
+    "jest": "^30.0.5",
+    "ts-jest": "^29.4.0",
     "typescript": "~5.8.3"
   },
   "private": true
