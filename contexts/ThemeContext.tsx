@@ -10,11 +10,18 @@ import {
   MaterialDesignConfig,
   ThemeAnimations,
   PerformanceSettings,
-  AccessibilityConfig
+  AccessibilityConfig,
+  VisualModeConfig,
+  TimerVisualization,
+  VisualEffect,
+  VisualEffectType,
+  EffectIntensity,
+  PerformanceLevel
 } from '../types/theme';
 import { dawnMistTheme, defaultThemeCollections } from '../constants/themes';
 import { savePreference, loadPreference } from '../utils/storage';
 import { getThemeById } from '../utils/themeValidation';
+import { VisualModeEngine, createVisualModeEngine, getDefaultModeConfig } from '../utils/visualModeEngine';
 
 // ============================================================================
 // Enhanced Theme Context Implementation
@@ -52,6 +59,19 @@ export const EnhancedThemeProvider = ({ children }: { children: ReactNode }) => 
   // Settings
   const [performanceSettings, setPerformanceSettings] = useState<PerformanceSettings>(defaultPerformanceSettings);
   const [accessibilityConfig, setAccessibilityConfig] = useState<AccessibilityConfig>(defaultAccessibilityConfig);
+
+  // Visual mode engine
+  const [visualModeEngine] = useState(() => createVisualModeEngine('minimal', 'high'));
+
+  // Sync visual mode engine with state
+  useEffect(() => {
+    visualModeEngine.switchMode(visualMode);
+  }, [visualMode, visualModeEngine]);
+
+  // Sync visual mode engine with performance settings
+  useEffect(() => {
+    visualModeEngine.optimizeForPerformance(performanceSettings.performanceLevel);
+  }, [performanceSettings.performanceLevel, visualModeEngine]);
 
   // Animation values for smooth transitions
   const [transitionAnimation] = useState(new Animated.Value(1));
@@ -330,6 +350,46 @@ export const EnhancedThemeProvider = ({ children }: { children: ReactNode }) => 
     return config;
   };
 
+  // Visual mode engine methods
+  const getVisualModeConfig = (mode?: VisualMode): VisualModeConfig => {
+    if (mode) {
+      return getDefaultModeConfig(mode);
+    }
+    return visualModeEngine.getCurrentModeConfig();
+  };
+
+  const getActiveVisualEffects = (): VisualEffect[] => {
+    return visualModeEngine.getActiveEffects();
+  };
+
+  const getTimerVisualization = (): TimerVisualization => {
+    return visualModeEngine.getTimerVisualization();
+  };
+
+  const updateTimerVisualization = (updates: Partial<TimerVisualization>): void => {
+    visualModeEngine.updateTimerVisualization(updates);
+  };
+
+  const enableVisualEffect = (effectType: VisualEffectType): void => {
+    visualModeEngine.enableEffect(effectType);
+  };
+
+  const disableVisualEffect = (effectType: VisualEffectType): void => {
+    visualModeEngine.disableEffect(effectType);
+  };
+
+  const setVisualEffectIntensity = (effectType: VisualEffectType, intensity: EffectIntensity): void => {
+    visualModeEngine.setEffectIntensity(effectType, intensity);
+  };
+
+  const isVisualEffectSupported = (effectType: VisualEffectType): boolean => {
+    return visualModeEngine.isEffectSupported(effectType);
+  };
+
+  const getVisualPerformanceImpact = (): PerformanceLevel => {
+    return visualModeEngine.getPerformanceImpact();
+  };
+
   const contextValue: EnhancedThemeContext = useMemo(() => ({
     // Current theme state
     currentTheme,
@@ -358,6 +418,17 @@ export const EnhancedThemeProvider = ({ children }: { children: ReactNode }) => 
     updatePerformanceSettings,
     updateAccessibilityConfig,
 
+    // Visual mode engine methods
+    getVisualModeConfig,
+    getActiveVisualEffects,
+    getTimerVisualization,
+    updateTimerVisualization,
+    enableVisualEffect,
+    disableVisualEffect,
+    setVisualEffectIntensity,
+    isVisualEffectSupported,
+    getVisualPerformanceImpact,
+
     // Utility functions
     getCurrentColors,
     getMaterialConfig,
@@ -371,6 +442,7 @@ export const EnhancedThemeProvider = ({ children }: { children: ReactNode }) => 
     performanceSettings,
     accessibilityConfig,
     systemColorScheme, // Add this dependency since getCurrentColors uses it
+    visualModeEngine, // Add visual mode engine as dependency
   ]);
 
   // Show loading state while preferences are being loaded

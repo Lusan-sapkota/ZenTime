@@ -1,13 +1,18 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { savePreference, loadPreference } from '../utils/storage';
-import { ZenModeConfig } from '../types/theme';
+import { ZenModeConfig, ZenAnimations, AnimationConfig } from '../types/theme';
 
 interface ZenModeContextProps {
   zenMode: boolean;
   zenConfig: ZenModeConfig;
+  zenAnimations: ZenAnimations;
   setZenMode: (zen: boolean) => void;
   updateZenConfig: (config: Partial<ZenModeConfig>) => void;
+  updateZenAnimations: (animations: Partial<ZenAnimations>) => void;
   isTransitioning: boolean;
+  isRevealed: boolean;
+  setRevealed: (revealed: boolean) => void;
+  resetRevealTimer: () => void;
 }
 
 const ZenModeContext = createContext<ZenModeContextProps | undefined>(undefined);
@@ -24,13 +29,40 @@ const DEFAULT_ZEN_CONFIG: ZenModeConfig = {
   preventScreenDim: true,
 };
 
+const DEFAULT_ZEN_ANIMATIONS: ZenAnimations = {
+  breathingCycle: {
+    duration: 4000,
+    easing: 'ease-in-out',
+    iterations: 'infinite',
+    direction: 'alternate',
+  },
+  pulseEffect: {
+    duration: 2000,
+    easing: 'ease-in-out',
+    iterations: 'infinite',
+    direction: 'alternate',
+  },
+  fadeTransitions: {
+    duration: 300,
+    easing: 'ease-out',
+  },
+  revealAnimations: {
+    duration: 250,
+    easing: 'ease-in-out',
+  },
+};
+
 const ZEN_MODE_STORAGE_KEY = 'zenMode';
 const ZEN_CONFIG_STORAGE_KEY = 'zenConfig';
+const ZEN_ANIMATIONS_STORAGE_KEY = 'zenAnimations';
 
 export const ZenModeProvider = ({ children }: { children: ReactNode }) => {
   const [zenMode, setZenModeState] = useState(false);
   const [zenConfig, setZenConfig] = useState<ZenModeConfig>(DEFAULT_ZEN_CONFIG);
+  const [zenAnimations, setZenAnimations] = useState<ZenAnimations>(DEFAULT_ZEN_ANIMATIONS);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isRevealed, setIsRevealed] = useState(false);
+  const [revealTimer, setRevealTimer] = useState<NodeJS.Timeout | null>(null);
 
   // Load zen mode settings on mount
   useEffect(() => {
@@ -38,6 +70,7 @@ export const ZenModeProvider = ({ children }: { children: ReactNode }) => {
       try {
         const savedZenMode = await loadPreference(ZEN_MODE_STORAGE_KEY);
         const savedZenConfig = await loadPreference(ZEN_CONFIG_STORAGE_KEY);
+        const savedZenAnimations = await loadPreference(ZEN_ANIMATIONS_STORAGE_KEY);
 
         if (savedZenMode !== null) {
           setZenModeState(savedZenMode === 'true');
@@ -47,6 +80,11 @@ export const ZenModeProvider = ({ children }: { children: ReactNode }) => {
           const parsedConfig = JSON.parse(savedZenConfig);
           setZenConfig({ ...DEFAULT_ZEN_CONFIG, ...parsedConfig });
         }
+
+        if (savedZenAnimations !== null) {
+          const parsedAnimations = JSON.parse(savedZenAnimations);
+          setZenAnimations({ ...DEFAULT_ZEN_ANIMATIONS, ...parsedAnimations });
+        }
       } catch (error) {
         console.warn('Failed to load zen mode settings:', error);
       }
@@ -54,6 +92,15 @@ export const ZenModeProvider = ({ children }: { children: ReactNode }) => {
 
     loadZenSettings();
   }, []);
+
+  // Clean up reveal timer on unmount
+  useEffect(() => {
+    return () => {
+      if (revealTimer) {
+        clearTimeout(revealTimer);
+      }
+    };
+  }, [revealTimer]);
 
   // Enhanced setZenMode with smooth transitions
   const setZenMode = async (zen: boolean) => {
@@ -92,14 +139,75 @@ export const ZenModeProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Update zen animations with persistence
+  const updateZenAnimations = async (animationsUpdate: Partial<ZenAnimations>) => {
+    const newAnimations = { ...zenAnimations, ...animationsUpdate };
+    
+    try {
+      await savePreference(ZEN_ANIMATIONS_STORAGE_KEY, JSON.stringify(newAnimations));
+      setZenAnimations(newAnimations);
+    } catch (error) {
+      console.warn('Failed to save zen animations:', error);
+      // Still update state even if save fails
+      setZenAnimations(newAnimations);
+    }
+  };
+
+  // Set revealed state with automatic timer reset
+  const setRevealed = (revealed: boolean) => {
+    setIsRevealed(revealed);
+    
+    if (revealed && zenConfig.tapToReveal) {
+      // Clear existing timer
+      if (revealTimer) {
+        clearTimeout(revealTimer);
+      }
+      
+      // Set new timer to hide controls after revealDuration
+      const timer = setTimeout(() => {
+        setIsRevealed(false);
+        setRevealTimer(null);
+      }, zenConfig.revealDuration);
+      
+      setRevealTimer(timer);
+    } else if (!revealed && revealTimer) {
+      // Clear timer if manually hiding
+      clearTimeout(revealTimer);
+      setRevealTimer(null);
+    }
+  };
+
+  // Reset reveal timer (useful for extending reveal time on user interaction)
+  const resetRevealTimer = () => {
+    if (isRevealed && zenConfig.tapToReveal) {
+      // Clear existing timer
+      if (revealTimer) {
+        clearTimeout(revealTimer);
+      }
+      
+      // Set new timer
+      const timer = setTimeout(() => {
+        setIsRevealed(false);
+        setRevealTimer(null);
+      }, zenConfig.revealDuration);
+      
+      setRevealTimer(timer);
+    }
+  };
+
   return (
     <ZenModeContext.Provider 
       value={{ 
         zenMode, 
         zenConfig, 
+        zenAnimations,
         setZenMode, 
         updateZenConfig, 
-        isTransitioning 
+        updateZenAnimations,
+        isTransitioning,
+        isRevealed,
+        setRevealed,
+        resetRevealTimer
       }}
     >
       {children}

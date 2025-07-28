@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { ZenToggle } from '../components/ZenToggle';
 import { MaterialButton, SecondaryButton, TonalButton } from '../components/MaterialButton';
 import { CardSurface, ElevatedSurface } from '../components/ElevatedSurface';
+import { CustomThemeManager } from '../components/CustomThemeManager';
 import { useZenModeContext } from '../contexts/ZenModeContext';
 import { useEnhancedTheme } from '../contexts/ThemeContext';
 import { ELEVATION_LEVELS } from '../utils/elevationUtils';
@@ -14,6 +15,7 @@ export const SettingsScreen = () => {
     themeMode,
     visualMode,
     availableThemes,
+    customThemes,
     setTheme,
     setThemeMode,
     setVisualMode,
@@ -21,6 +23,7 @@ export const SettingsScreen = () => {
   } = useEnhancedTheme();
 
   const colors = getCurrentColors();
+  const [showCustomThemeManager, setShowCustomThemeManager] = useState(false);
 
   // Create dynamic styles based on current theme
   const dynamicStyles = StyleSheet.create({
@@ -107,32 +110,32 @@ export const SettingsScreen = () => {
           </View>
 
           <View style={dynamicStyles.visualModeGrid}>
-            <TonalButton
+            <MaterialButton
               title="Light"
               onPress={() => setThemeMode('light')}
               style={
                 themeMode === 'light'
-                  ? [dynamicStyles.visualModeButton, dynamicStyles.currentThemeIndicator]
+                  ? StyleSheet.flatten([dynamicStyles.visualModeButton, dynamicStyles.currentThemeIndicator])
                   : dynamicStyles.visualModeButton
               }
               variant={themeMode === 'light' ? 'filled' : 'tonal'}
             />
-            <TonalButton
+            <MaterialButton
               title="Dark"
               onPress={() => setThemeMode('dark')}
               style={
                 themeMode === 'dark'
-                  ? [dynamicStyles.visualModeButton, dynamicStyles.currentThemeIndicator]
+                  ? StyleSheet.flatten([dynamicStyles.visualModeButton, dynamicStyles.currentThemeIndicator])
                   : dynamicStyles.visualModeButton
               }
               variant={themeMode === 'dark' ? 'filled' : 'tonal'}
             />
-            <TonalButton
+            <MaterialButton
               title="System"
               onPress={() => setThemeMode('system')}
               style={
                 themeMode === 'system'
-                  ? [dynamicStyles.visualModeButton, dynamicStyles.currentThemeIndicator]
+                  ? StyleSheet.flatten([dynamicStyles.visualModeButton, dynamicStyles.currentThemeIndicator])
                   : dynamicStyles.visualModeButton
               }
               variant={themeMode === 'system' ? 'filled' : 'tonal'}
@@ -154,13 +157,52 @@ export const SettingsScreen = () => {
                   onPress={() => setTheme(theme.id)}
                   style={
                     currentTheme.id === theme.id
-                      ? [dynamicStyles.themeButton, dynamicStyles.currentThemeIndicator]
+                      ? StyleSheet.flatten([dynamicStyles.themeButton, dynamicStyles.currentThemeIndicator])
                       : dynamicStyles.themeButton
                   }
-                  variant={currentTheme.id === theme.id ? 'filled' : 'tonal'}
                   size="small"
                 />
               ))}
+            </View>
+          </View>
+
+          {/* Custom Themes Section */}
+          <View style={{ marginTop: 20 }}>
+            <View style={dynamicStyles.settingRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={dynamicStyles.settingLabel}>Custom Themes</Text>
+                <Text style={dynamicStyles.settingDescription}>
+                  Create and manage your personalized themes ({customThemes.length} created)
+                </Text>
+              </View>
+            </View>
+
+            <View style={{ marginTop: 8 }}>
+              <MaterialButton
+                title="Manage Custom Themes"
+                onPress={() => setShowCustomThemeManager(true)}
+                variant="tonal"
+                style={{ marginBottom: 8 }}
+              />
+              
+              {/* Show custom themes if any exist */}
+              {customThemes.length > 0 && (
+                <View style={dynamicStyles.themeGrid}>
+                  {customThemes.map((theme) => (
+                    <TonalButton
+                      key={theme.id}
+                      title={theme.name}
+                      onPress={() => setTheme(theme.id)}
+                      style={
+                        currentTheme.id === theme.id
+                          ? StyleSheet.flatten([dynamicStyles.themeButton, dynamicStyles.currentThemeIndicator])
+                          : dynamicStyles.themeButton
+                      }
+                      size="small"
+                    />
+                  ))}
+                </View>
+              )}
             </View>
           </View>
         </CardSurface>
@@ -179,34 +221,34 @@ export const SettingsScreen = () => {
           </View>
 
           <View style={dynamicStyles.visualModeGrid}>
-            <TonalButton
+            <MaterialButton
               title="Minimal"
               onPress={() => setVisualMode('minimal')}
               style={
                 visualMode === 'minimal'
-                  ? [dynamicStyles.visualModeButton, dynamicStyles.currentThemeIndicator]
+                  ? StyleSheet.flatten([dynamicStyles.visualModeButton, dynamicStyles.currentThemeIndicator])
                   : dynamicStyles.visualModeButton
               }
               variant={visualMode === 'minimal' ? 'filled' : 'tonal'}
               size="small"
             />
-            <TonalButton
+            <MaterialButton
               title="Artistic"
               onPress={() => setVisualMode('artistic')}
               style={
                 visualMode === 'artistic'
-                  ? [dynamicStyles.visualModeButton, dynamicStyles.currentThemeIndicator]
+                  ? StyleSheet.flatten([dynamicStyles.visualModeButton, dynamicStyles.currentThemeIndicator])
                   : dynamicStyles.visualModeButton
               }
               variant={visualMode === 'artistic' ? 'filled' : 'tonal'}
               size="small"
             />
-            <TonalButton
+            <MaterialButton
               title="Ambient"
               onPress={() => setVisualMode('ambient')}
               style={
                 visualMode === 'ambient'
-                  ? [dynamicStyles.visualModeButton, dynamicStyles.currentThemeIndicator]
+                  ? StyleSheet.flatten([dynamicStyles.visualModeButton, dynamicStyles.currentThemeIndicator])
                   : dynamicStyles.visualModeButton
               }
               variant={visualMode === 'ambient' ? 'filled' : 'tonal'}
@@ -258,6 +300,12 @@ export const SettingsScreen = () => {
           />
         </ElevatedSurface>
       </ScrollView>
+
+      {/* Custom Theme Manager Modal */}
+      <CustomThemeManager
+        visible={showCustomThemeManager}
+        onClose={() => setShowCustomThemeManager(false)}
+      />
     </View>
   );
 };

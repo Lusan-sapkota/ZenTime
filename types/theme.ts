@@ -260,6 +260,82 @@ export interface AccessibilityConfig {
 }
 
 // ============================================================================
+// Visual Mode System
+// ============================================================================
+
+/**
+ * Visual effect types for different visual modes
+ */
+export type VisualEffectType = 'background' | 'particles' | 'gradient' | 'pattern' | 'typography';
+
+/**
+ * Visual effect intensity levels
+ */
+export type EffectIntensity = 'subtle' | 'moderate' | 'prominent';
+
+/**
+ * Individual visual effect configuration
+ */
+export interface VisualEffect {
+  type: VisualEffectType;
+  intensity: EffectIntensity;
+  animation: AnimationConfig;
+  performance: PerformanceLevel;
+  enabled: boolean;
+}
+
+/**
+ * Visual mode configuration interface
+ */
+export interface VisualModeConfig {
+  id: VisualMode;
+  name: string;
+  description: string;
+  effects: VisualEffect[];
+  performanceImpact: PerformanceLevel;
+  batteryImpact: 'low' | 'medium' | 'high';
+}
+
+/**
+ * Timer visualization configuration
+ */
+export interface TimerVisualization {
+  // Clock Enhancements
+  digitTransitions: 'flip' | 'slide' | 'fade' | 'scale';
+  secondsAnimation: boolean;
+  
+  // Stopwatch Enhancements
+  progressIndicator: 'ring' | 'bar' | 'pulse' | 'none';
+  elapsedTimeVisualization: boolean;
+  
+  // Background Effects
+  timeBasedGradients: boolean;
+  ambientParticles: boolean;
+  breathingBackground: boolean;
+}
+
+/**
+ * Visual mode engine configuration
+ */
+export interface VisualModeEngine {
+  currentMode: VisualMode;
+  availableModes: VisualModeConfig[];
+  timerVisualization: TimerVisualization;
+  
+  // Mode switching
+  switchMode: (mode: VisualMode) => void;
+  
+  // Effect management
+  enableEffect: (effectType: VisualEffectType) => void;
+  disableEffect: (effectType: VisualEffectType) => void;
+  setEffectIntensity: (effectType: VisualEffectType, intensity: EffectIntensity) => void;
+  
+  // Performance optimization
+  optimizeForPerformance: (level: PerformanceLevel) => void;
+  getActiveEffects: () => VisualEffect[];
+}
+
+// ============================================================================
 // Zen Mode Configuration
 // ============================================================================
 
@@ -329,6 +405,17 @@ export interface EnhancedThemeContext {
   // Settings actions
   updatePerformanceSettings: (settings: Partial<PerformanceSettings>) => void;
   updateAccessibilityConfig: (config: Partial<AccessibilityConfig>) => void;
+  
+  // Visual mode engine methods
+  getVisualModeConfig: (mode?: VisualMode) => VisualModeConfig;
+  getActiveVisualEffects: () => VisualEffect[];
+  getTimerVisualization: () => TimerVisualization;
+  updateTimerVisualization: (updates: Partial<TimerVisualization>) => void;
+  enableVisualEffect: (effectType: VisualEffectType) => void;
+  disableVisualEffect: (effectType: VisualEffectType) => void;
+  setVisualEffectIntensity: (effectType: VisualEffectType, intensity: EffectIntensity) => void;
+  isVisualEffectSupported: (effectType: VisualEffectType) => boolean;
+  getVisualPerformanceImpact: () => PerformanceLevel;
   
   // Utility functions
   getCurrentColors: () => ColorPalette;
