@@ -238,19 +238,19 @@ const midnightOceanLight: ColorPalette = {
   onSurfaceVariant: '#475569',
   
   // Primary Colors
-  primary: '#0EA5E9',
+  primary: '#0369A1', // Darker for better contrast
   onPrimary: '#FFFFFF',
   primaryContainer: '#E0F2FE',
   onPrimaryContainer: '#0C4A6E',
-  primaryFixed: '#0EA5E9',
+  primaryFixed: '#0369A1',
   onPrimaryFixed: '#FFFFFF',
   
   // Secondary Colors
-  secondary: '#06B6D4',
+  secondary: '#0891B2', // Darker for better contrast
   onSecondary: '#FFFFFF',
   secondaryContainer: '#CFFAFE',
   onSecondaryContainer: '#164E63',
-  secondaryFixed: '#06B6D4',
+  secondaryFixed: '#0891B2',
   onSecondaryFixed: '#FFFFFF',
   
   // Tertiary Colors
@@ -292,12 +292,12 @@ const midnightOceanDark: ColorPalette = {
   onSurfaceVariant: '#94A3B8',
   
   // Primary Colors
-  primary: '#38BDF8',
-  onPrimary: '#0C4A6E',
+  primary: '#0EA5E9', // Better contrast
+  onPrimary: '#FFFFFF',
   primaryContainer: '#0369A1',
   onPrimaryContainer: '#E0F2FE',
-  primaryFixed: '#38BDF8',
-  onPrimaryFixed: '#0C4A6E',
+  primaryFixed: '#0EA5E9',
+  onPrimaryFixed: '#FFFFFF',
   
   // Secondary Colors
   secondary: '#22D3EE',
@@ -314,8 +314,8 @@ const midnightOceanDark: ColorPalette = {
   onTertiaryContainer: '#D1FAE5',
   
   // System Colors
-  error: '#F87171',
-  onError: '#7F1D1D',
+  error: '#EF4444', // Better contrast
+  onError: '#FFFFFF',
   errorContainer: '#991B1B',
   onErrorContainer: '#FECACA',
   
@@ -373,11 +373,11 @@ const forestZenLight: ColorPalette = {
   onSurfaceVariant: '#4B5563',
   
   // Primary Colors
-  primary: '#059669',
+  primary: '#047857', // Darker for better contrast
   onPrimary: '#FFFFFF',
   primaryContainer: '#D1FAE5',
   onPrimaryContainer: '#064E3B',
-  primaryFixed: '#059669',
+  primaryFixed: '#047857',
   onPrimaryFixed: '#FFFFFF',
   
   // Secondary Colors
@@ -427,12 +427,12 @@ const forestZenDark: ColorPalette = {
   onSurfaceVariant: '#9CA3AF',
   
   // Primary Colors
-  primary: '#10B981',
-  onPrimary: '#064E3B',
+  primary: '#059669', // Better contrast
+  onPrimary: '#FFFFFF',
   primaryContainer: '#047857',
   onPrimaryContainer: '#D1FAE5',
-  primaryFixed: '#10B981',
-  onPrimaryFixed: '#064E3B',
+  primaryFixed: '#059669',
+  onPrimaryFixed: '#FFFFFF',
   
   // Secondary Colors
   secondary: '#F59E0B',
@@ -719,8 +719,8 @@ const arcticMinimalDark: ColorPalette = {
   onTertiaryContainer: '#D1FAE5',
   
   // System Colors
-  error: '#F87171',
-  onError: '#7F1D1D',
+  error: '#EF4444', // Better contrast
+  onError: '#FFFFFF',
   errorContainer: '#991B1B',
   onErrorContainer: '#FECACA',
   

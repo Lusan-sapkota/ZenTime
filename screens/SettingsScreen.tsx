@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { ZenToggle } from '../components/ZenToggle';
 import { MaterialButton, SecondaryButton, TonalButton } from '../components/MaterialButton';
 import { CardSurface, ElevatedSurface } from '../components/ElevatedSurface';
@@ -7,6 +7,7 @@ import { CustomThemeManager } from '../components/CustomThemeManager';
 import { useZenModeContext } from '../contexts/ZenModeContext';
 import { useEnhancedTheme } from '../contexts/ThemeContext';
 import { ELEVATION_LEVELS } from '../utils/elevationUtils';
+import { ThemeCollection } from '../types/theme';
 
 export const SettingsScreen = () => {
   const { zenMode, setZenMode } = useZenModeContext();
@@ -24,6 +25,7 @@ export const SettingsScreen = () => {
 
   const colors = getCurrentColors();
   const [showCustomThemeManager, setShowCustomThemeManager] = useState(false);
+  const [previewTheme, setPreviewTheme] = useState<ThemeCollection | null>(null);
 
   // Create dynamic styles based on current theme
   const dynamicStyles = StyleSheet.create({
@@ -86,6 +88,44 @@ export const SettingsScreen = () => {
     visualModeButton: {
       flex: 1,
     },
+    themePreviewCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 12,
+      marginBottom: 8,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.outline,
+    },
+    themePreviewColors: {
+      flexDirection: 'row',
+      marginRight: 12,
+    },
+    colorSwatch: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      marginRight: 4,
+    },
+    themePreviewInfo: {
+      flex: 1,
+    },
+    themePreviewName: {
+      fontSize: 16,
+      fontFamily: 'Inter_500Medium',
+      color: colors.onSurface,
+    },
+    themePreviewDescription: {
+      fontSize: 12,
+      fontFamily: 'Inter_400Regular',
+      color: colors.onSurfaceVariant,
+      marginTop: 2,
+    },
+    selectedThemePreview: {
+      backgroundColor: colors.primaryContainer,
+      borderColor: colors.primary,
+      borderWidth: 2,
+    },
   });
 
   return (
@@ -142,27 +182,58 @@ export const SettingsScreen = () => {
             />
           </View>
 
-          {/* Theme Collection Selection */}
+          {/* Theme Collection Selection with Preview */}
           <View style={{ marginTop: 20 }}>
             <Text style={dynamicStyles.settingLabel}>Theme Collection</Text>
             <Text style={dynamicStyles.settingDescription}>
-              Choose from curated color palettes
+              Choose from curated color palettes with live preview
             </Text>
 
-            <View style={dynamicStyles.themeGrid}>
-              {availableThemes.map((theme) => (
-                <TonalButton
-                  key={theme.id}
-                  title={theme.name}
-                  onPress={() => setTheme(theme.id)}
-                  style={
-                    currentTheme.id === theme.id
-                      ? StyleSheet.flatten([dynamicStyles.themeButton, dynamicStyles.currentThemeIndicator])
-                      : dynamicStyles.themeButton
-                  }
-                  size="small"
-                />
-              ))}
+            <View style={{ marginTop: 12 }}>
+              {availableThemes.map((theme) => {
+                const isSelected = currentTheme.id === theme.id;
+                const themeColors = themeMode === 'dark' || (themeMode === 'system' && colors.background === theme.dark.background) 
+                  ? theme.dark 
+                  : theme.light;
+
+                return (
+                  <Pressable
+                    key={theme.id}
+                    style={[
+                      dynamicStyles.themePreviewCard,
+                      isSelected && dynamicStyles.selectedThemePreview
+                    ]}
+                    onPress={() => setTheme(theme.id)}
+                  >
+                    {/* Color Swatches */}
+                    <View style={dynamicStyles.themePreviewColors}>
+                      <View style={[dynamicStyles.colorSwatch, { backgroundColor: themeColors.primary }]} />
+                      <View style={[dynamicStyles.colorSwatch, { backgroundColor: themeColors.secondary }]} />
+                      <View style={[dynamicStyles.colorSwatch, { backgroundColor: themeColors.surface }]} />
+                    </View>
+
+                    {/* Theme Info */}
+                    <View style={dynamicStyles.themePreviewInfo}>
+                      <Text style={dynamicStyles.themePreviewName}>{theme.name}</Text>
+                      <Text style={dynamicStyles.themePreviewDescription}>{theme.description}</Text>
+                    </View>
+
+                    {/* Selection Indicator */}
+                    {isSelected && (
+                      <View style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: 12,
+                        backgroundColor: colors.primary,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}>
+                        <Text style={{ color: colors.onPrimary, fontSize: 16 }}>✓</Text>
+                      </View>
+                    )}
+                  </Pressable>
+                );
+              })}
             </View>
           </View>
 

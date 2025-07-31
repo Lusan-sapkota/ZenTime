@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useEnhancedTheme } from '../contexts/ThemeContext';
 import { useZenModeContext } from '../contexts/ZenModeContext';
 import { ElevatedSurface } from './ElevatedSurface';
+import { VisualModeContainer } from './VisualEffects';
 import { ELEVATION_LEVELS } from '../utils/elevationUtils';
 
 interface ClockDisplayProps {
@@ -522,10 +523,12 @@ export const ClockDisplay: React.FC<ClockDisplayProps> = ({
   };
 
   return (
-    <View style={zenMode ? dynamicStyles.zenContainer : dynamicStyles.container}>
-      {renderTimeBasedGradient()}
-      {renderArtisticBackground()}
-      {renderTimeDisplay()}
-    </View>
+    <VisualModeContainer>
+      <View style={zenMode ? dynamicStyles.zenContainer : dynamicStyles.container}>
+        {renderTimeBasedGradient()}
+        {renderArtisticBackground()}
+        {renderTimeDisplay()}
+      </View>
+    </VisualModeContainer>
   );
 };
